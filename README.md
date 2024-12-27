@@ -1,2 +1,3 @@
-Old APP DrugInfo ( Drugbank Database ) - STOP
+Old APP DrugInfo ( Drugbank Database ) - Droppedproject
+
 New app creating.....
