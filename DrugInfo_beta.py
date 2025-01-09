@@ -16,26 +16,50 @@ class FormattedEntry(ttk.Entry):
         self.configure(textvariable=self.variable)
         self.configure(validate="key")
         self.configure(validatecommand=(self.register(self.validate_numeric), '%P'))
+        # Thêm biến để theo dõi vị trí con trỏ
+        self.cursor_position = 0
 
     def format_number(self, *args):
-        value = self.variable.get().replace(' ', '')  # Remove existing spaces
+        # Lưu vị trí con trỏ hiện tại
+        try:
+            self.cursor_position = self.index(tk.INSERT)
+        except:
+            self.cursor_position = 0
+            
+        value = self.variable.get().replace(' ', '')  # Xóa khoảng trắng
+        
         if value.isdigit():
+            # Đếm số ký tự khoảng trắng trước vị trí con trỏ
+            original_text = self.variable.get()
+            spaces_before_cursor = len([c for c in original_text[:self.cursor_position] if c == ' '])
+            
+            # Định dạng số
             formatted = ' '.join([value[max(i-3, 0):i] for i in range(len(value), 0, -3)][::-1])
+            
+            # Đặt giá trị mới
             self.variable.set(formatted)
-            self.message = tk.StringVar()  # Add this line
-
+            
+            # Tính toán vị trí con trỏ mới
+            new_spaces = len([c for c in formatted[:self.cursor_position + spaces_before_cursor] if c == ' '])
+            new_position = self.cursor_position + (new_spaces - spaces_before_cursor)
+            
+            # Đặt lại vị trí con trỏ sau khi định dạng
+            self.after(0, lambda: self.icursor(new_position))
 
     def validate_numeric(self, text):
         return text == "" or text.replace(' ', '').isdigit()
 
+
+
 class DrugSearchApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Ứng dụng Tra cứu Thuốc")
+        self.root.title("Ứng dụng Tra cứu Thuốc - beta 0.3.1")
 
         # Initialize previous search variables
         self.prev_brand_search = ""
         self.prev_ingredient_search = ""
+        self.discount_var = tk.StringVar(value="20")  # Default to 20%
 
         # Add this line to define self.message
         self.message = tk.StringVar()
@@ -99,13 +123,15 @@ class DrugSearchApp:
         self.ingredient_entry = ttk.Entry(left_frame, textvariable=self.ingredient_var, width=40)
         self.ingredient_entry.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Frame phải cho các thuốc và tổng tiền
-        right_frame = ttk.Frame(main_frame)
-        right_frame.grid(row=0, column=1, sticky=(tk.W, tk.N))
-
         # Dictionary để lưu trữ các biến và entry fields
         self.drug_entries = {}
         self.drug_labels = {}
+
+        # Frame phải cho các thuốc và tổng tiền
+        right_frame = ttk.Frame(main_frame)
+        right_frame.grid(row=0, column=1, sticky=(tk.W, tk.N), padx=(0, 250))  # Thêm padding bên phải
+
+
         
         # Tạo các trường nhập liệu cho thuốc
         for i in range(4):
@@ -129,22 +155,31 @@ class DrugSearchApp:
             self.drug_entries[f"drug{i+1}"] = {"var": var, "entry": entry}
             self.drug_labels[f"drug{i+1}"] = {"var": label_var, "label": label, "is_default": True}
 
-
+        # Thêm phần Tỉ lệ ngay sau Thuốc 4, đẩy sang trái
+        ttk.Label(right_frame, text="Tỉ lệ:").grid(row=4, column=0, padx=(0, 5), pady=5, sticky=tk.W)
+        
+        self.discount_var = tk.StringVar(value="20")
+        discount_20 = ttk.Radiobutton(right_frame, text="20%", variable=self.discount_var, value="20")
+        discount_20.grid(row=4, column=1, padx=(0, 5), sticky=tk.W)
+        
+        # discount_50 = ttk.Radiobutton(right_frame, text="50%", variable=self.discount_var, value="50")
+        # discount_50.grid(row=4, column=2, padx=(0, 5), sticky=tk.W)
 
         # Tổng tiền
-        ttk.Label(right_frame, text="Tổng tiền:").grid(row=4, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(right_frame, text="Tổng tiền:").grid(row=5, column=0, padx=(0, 5), pady=5, sticky=tk.W)
         self.total_var = tk.StringVar()
         total_entry = FormattedEntry(right_frame, textvariable=self.total_var, width=15)
-        total_entry.grid(row=4, column=1, padx=5, pady=5)
+        total_entry.grid(row=5, column=1, padx=(0, 5), pady=5, sticky=tk.W)
 
         # Nút Calculate
         calculate_btn = ttk.Button(right_frame, text="Calculate / Copy to Clipboard", command=self.calculate_total)
-        calculate_btn.grid(row=4, column=2, padx=5, pady=5)
+        calculate_btn.grid(row=5, column=2, padx=(0, 5), pady=5, sticky=tk.W)
 
-        # New label below the total price
+        # Thêm label để hiển thị thông tin sau khi tính toán
         self.info_label_var = tk.StringVar()
-        info_label = ttk.Label(right_frame, textvariable=self.info_label_var)
-        info_label.grid(row=5, column=0, columnspan=3, padx=5, pady=5, sticky=tk.W)
+        info_label = ttk.Label(right_frame, textvariable=self.info_label_var, wraplength=400)
+        info_label.grid(row=6, column=0, columnspan=3, padx=(0, 5), pady=5, sticky=tk.W)
+
         
         # Khu vực hiển thị kết quả
         result_frame = ttk.Frame(main_frame)
@@ -155,7 +190,7 @@ class DrugSearchApp:
         # Treeview để hiển thị kết quả
         self.result_tree = ttk.Treeview(
             result_frame, 
-            columns=("reg_no", "brand", "ingredient", "phanLoaiThuocEnum", "conHieuLuc", "soQuyetDinh"),
+            columns=("reg_no", "brand", "ingredient", "reg_no_old", "ngayHetHan", "soQuyetDinh"),
             show="headings",
             height=20
         )
@@ -165,18 +200,21 @@ class DrugSearchApp:
         self.result_tree.heading("reg_no", text="Số đăng ký")
         self.result_tree.heading("brand", text="Tên thuốc")
         self.result_tree.heading("ingredient", text="Hoạt chất")
-        self.result_tree.heading("phanLoaiThuocEnum", text="Phân loại")
-        self.result_tree.heading("conHieuLuc", text="Tình trạng")
+        self.result_tree.heading("reg_no_old", text="Số đăng ký cũ")
+        self.result_tree.heading("ngayHetHan", text="Ngày hết hạn")
         self.result_tree.heading("soQuyetDinh", text="Số quyết định")
         
-    # Configure column widths
+        # Configure column widths
         self.result_tree.column("reg_no", width=100, minwidth=100)
         self.result_tree.column("brand", width=200, minwidth=150)
-        self.result_tree.column("ingredient", width=600, minwidth=200)
-        self.result_tree.column("phanLoaiThuocEnum", width=70, minwidth=50)
-        self.result_tree.column("conHieuLuc", width=70, minwidth=50)
+        self.result_tree.column("ingredient", width=450, minwidth=200)
+        self.result_tree.column("reg_no_old", width=100, minwidth=100)
+        self.result_tree.column("ngayHetHan", width=100, minwidth=50)
         self.result_tree.column("soQuyetDinh", width=150, minwidth=100) 
         
+        self.tooltip = None
+        self.tooltip_label = None
+
         # Thanh cuộn
         scrollbar = ttk.Scrollbar(result_frame, orient=tk.VERTICAL, command=self.result_tree.yview)
         scrollbar.grid(row=1, column=1, sticky=(tk.N, tk.S))
@@ -188,11 +226,63 @@ class DrugSearchApp:
         self.result_tree.bind('<Double-1>', self.on_tree_double_click)
 
         # Add copyright label at the bottom of main_frame
-        copyright_label = ttk.Label(main_frame, text="© Copyright by Hau   -   version 1.0", font=("Arial", 8), foreground="grey")
+        copyright_label = ttk.Label(main_frame, text="©Copyright by Hau   -   version 0.3.1", font=("Arial", 8), foreground="grey")
         copyright_label.grid(row=100, column=0, columnspan=2, pady=5, sticky=tk.S)
 
         # Make sure the last row (with copyright) expands to fill space
         main_frame.grid_rowconfigure(100, weight=1)
+        
+        # Add event bindings for tooltip
+        self.result_tree.bind("<Enter>", self.on_tree_enter)
+        self.result_tree.bind("<Leave>", self.on_tree_leave)
+        self.result_tree.bind("<Motion>", self.on_tree_motion)
+        
+        # Make the result_frame expandable
+        main_frame.grid_rowconfigure(1, weight=1)
+        main_frame.grid_columnconfigure(0, weight=1)
+        result_frame.grid_rowconfigure(1, weight=1)
+        result_frame.grid_columnconfigure(0, weight=1)
+
+    def update_results(self, results: List[Tuple]):
+        """Cập nhật kết quả trong Treeview"""
+        for item in self.result_tree.get_children():
+            self.result_tree.delete(item)
+        
+        for result in results:
+            self.result_tree.insert("", tk.END, values=result)
+
+    def on_tree_enter(self, event):
+        self.tooltip = tk.Toplevel(self.root)
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry("+0+0")
+        self.tooltip.lift()  # Ensure the tooltip is on top
+        self.tooltip_label = tk.Label(self.tooltip, justify=tk.LEFT, background="#ffffe0", relief=tk.SOLID, borderwidth=1, wraplength=350)
+        self.tooltip_label.pack(ipadx=1)
+
+    def on_tree_leave(self, event):
+        if self.tooltip:
+            self.tooltip.destroy()
+            self.tooltip = None
+            self.tooltip_label = None
+
+    def on_tree_motion(self, event):
+        try:
+            item = self.result_tree.identify_row(event.y)
+            if item:
+                values = self.result_tree.item(item, 'values')
+                if values:
+                    # Assuming 'hoatChatChinh' is the 3rd column (index 2) in values
+                    hoat_chat_chinh = values[2]
+                    
+                    tooltip_text = f"Hoạt chất chính: {hoat_chat_chinh}"
+                    
+                    self.tooltip_label.config(text=tooltip_text)
+                    self.tooltip.geometry(f"+{event.x_root}+{event.y_root + 20}")
+                    self.tooltip.deiconify()
+            else:
+                self.tooltip.withdraw()
+        except tk.TclError:
+            pass
 
     def clear_drug(self, position):
         """Clear the drug label and reset it to the initial state"""
@@ -215,15 +305,16 @@ class DrugSearchApp:
         # Đánh dấu label đã về mặc định
         self.drug_labels[pos]["is_default"] = True
 
-    def calculate_total(self):
+    def calculate_total(self, *args):
         """Calculate the total and apply the vitamin limit rule"""
+
         try:
             # Convert formatted total to number
             total_amount = int(self.total_var.get().replace(' ', ''))
             
-            # Calculate 20% of the total for vitamins
-            vit = total_amount * 0.2
-            
+            # Get the selected discount percentage
+            discount_percent = int(self.discount_var.get())
+
             # Calculate the sum of the 4 drug prices
             sum_drugs = 0
             for entry_data in self.drug_entries.values():
@@ -235,36 +326,58 @@ class DrugSearchApp:
                     # If the entry is not a valid number, skip it
                     pass
             
-            # Calculate the result
-            result = sum_drugs - vit
+            # Calculate the vitamin limit
+            if discount_percent == 20:
+                vit_limit = total_amount * 0.2
+            # elif discount_percent == 50:
+            #     vit_limit = total_amount * 0.5
+            else:
+                raise ValueError("Invalid discount percentage")
+            
+            # Calculate the result (amount exceeding the limit)
+            if sum_drugs > vit_limit:
+                result = sum_drugs - vit_limit
+            else:
+                result = 0
             
             # Update the info label
             if result > 0:
-                self.message.set(f"Trừ {result:,.0f}đ số tiền vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
+                if discount_percent == 20:
+                    self.message.set(f"Trừ {result:,.0f}đ số tiền vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
+                # elif discount_percent == 50:
+                #     self.message.set(f"Trừ {result:,.0f}đ số tiền vượt hạn mức 50% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
                 self.info_label_var.set(self.message.get())
                 pyperclip.copy(self.message.get())  # Copy to clipboard
             else:
-                self.message.set("Không vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
+                if discount_percent == 20:
+                    self.message.set("Không vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
+                # elif discount_percent == 50:
+                #     self.message.set("Không vượt hạn mức 50% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
                 self.info_label_var.set(self.message.get())
         
         except ValueError:
             # Handle the case where the total amount is not a valid number
             self.info_label_var.set("Vui lòng nhập tổng tiền hợp lệ")
-            self.info_label_var.set(self.message.get())
+            self.message.set("Vui lòng nhập tổng tiền hợp lệ")
 
     def search_drugs(self, brand_name: str, ingredient_name: str) -> List[Tuple]:
         """Tìm kiếm thuốc trong database"""
         query = """
-        SELECT [soDangKy], [tenThuoc], [hoatChatChinh], [phanLoaiThuocEnum], [isActive], [soQuyetDinh]
+        SELECT [soDangKy], [tenThuoc], [hoatChatChinh], [soDangKyCu], [ngayHetHan], [soQuyetDinh]
         FROM druginformation
-        WHERE [tenThuoc] LIKE ? || '%' AND [hoatChatChinh] LIKE ? || '%'
-        LIMIT 10
+        WHERE [tenThuoc] LIKE ? AND [hoatChatChinh] LIKE ?
+        LIMIT 20
         """
         brand_pattern = f"%{brand_name}%" if brand_name else "%"
         ingredient_pattern = f"%{ingredient_name}%" if ingredient_name else "%"
         
-        self.cursor.execute(query, (brand_pattern, ingredient_pattern))
-        return self.cursor.fetchall()
+        try:
+            self.cursor.execute(query, (brand_pattern, ingredient_pattern))
+            return self.cursor.fetchall()
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+            messagebox.showerror("Database Error", f"An error occurred while searching: {e}")
+            return []
 
     def update_results(self, results: List[Tuple]):
         """Cập nhật kết quả trong Treeview"""
