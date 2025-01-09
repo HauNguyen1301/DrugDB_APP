@@ -4,8 +4,11 @@ import gzip
 import io, os
 import sqlite3
 import tempfile
+from tkinter import messagebox
 from typing import List, Tuple
 import pyperclip  # Add this import at the top of your file
+import socket
+import base64
 
 
 class FormattedEntry(ttk.Entry):
@@ -52,6 +55,67 @@ class FormattedEntry(ttk.Entry):
 
 
 class DrugSearchApp:
+    
+    # def validate_key(self):
+    #     try:
+    #         # Lấy hostname của máy
+    #         hostname = socket.gethostname()[7:]
+    #         # Mã hóa hostname bằng base64
+    #         encoded_hostname = base64.b64encode(hostname.encode()).decode()
+    #         # Lấy key người dùng nhập vào
+    #         user_key = self.key_var.get()
+            
+    #         # So sánh key
+    #         if user_key == encoded_hostname:
+    #             return True
+    #         return False
+    #     except Exception as e:
+    #         print(f"Lỗi kiểm tra key: {e}")
+    #         return False
+    def xor_encrypt(self, input_string, key):
+        """Perform XOR encryption on the input string using the given key."""
+        encrypted_chars = [chr(ord(char) ^ ord(key[i % len(key)])) for i, char in enumerate(input_string)]
+        return ''.join(encrypted_chars)
+
+    def encode_string_advanced(self, input_string, key):
+        """Encode the input string using XOR encryption and Base64 encoding."""
+        xor_encrypted = self.xor_encrypt(input_string, key)
+        byte_string = xor_encrypted.encode('utf-8')
+        encoded_bytes = base64.b64encode(byte_string)
+        return encoded_bytes.decode('utf-8')
+
+    def decode_string_advanced(self, encoded_string, key):
+        """Decode the encoded string using Base64 decoding and XOR decryption."""
+        decoded_bytes = base64.b64decode(encoded_string)
+        xor_encrypted = decoded_bytes.decode('utf-8')
+        return self.xor_encrypt(xor_encrypted, key)
+
+    def validate_key(self):
+        """Validate the user-entered key against the encrypted hostname."""
+        try:
+            # Get the hostname of the machine
+            hostname = socket.gethostname()[7:]
+            
+            # Use a fixed key for encryption (you can change this to a more secure key)
+            encryption_key = "13011991"
+            
+            # Encode the hostname using the advanced method
+            encoded_hostname = self.encode_string_advanced(hostname, encryption_key)
+            
+            # Get the key entered by the user
+            user_key = self.key_var.get()
+            
+            # Compare the keys
+            if user_key == encoded_hostname:
+                return True
+            return False
+        except Exception as e:
+            print(f"Error validating key: {e}")
+            return False
+
+
+
+
     def __init__(self, root):
         self.root = root
         self.root.title("Ứng dụng Tra cứu Thuốc - beta 0.3.1")
@@ -100,6 +164,21 @@ class DrugSearchApp:
             except Exception as e:
                 print(f"Lỗi khi xóa file tạm thời: {e}")
 
+    def verify_key(self):
+        """Xác nhận key và cập nhật trạng thái"""
+        if self.validate_key():
+            self.status_label_var.set("✓ Key hợp lệ")
+            self.status_label.configure(foreground="green")
+            # Kích hoạt tìm kiếm nếu có dữ liệu
+            self.on_search_change()
+        else:
+            self.status_label_var.set("✗ Key không hợp lệ")
+            self.status_label.configure(foreground="red")
+            # Xóa kết quả tìm kiếm nếu có
+            for item in self.result_tree.get_children():
+                self.result_tree.delete(item)
+
+
     def create_widgets(self):
         # Frame chính
         main_frame = ttk.Frame(self.root, padding="10")
@@ -111,17 +190,38 @@ class DrugSearchApp:
         left_frame = ttk.Frame(main_frame)
         left_frame.grid(row=0, column=0, sticky=(tk.W, tk.N), padx=(0, 20))
 
+        # Label và Entry cho key (row 0)
+        key_frame = ttk.Frame(left_frame)
+        key_frame.grid(row=0, column=0, columnspan=2, sticky=tk.W+tk.E)
+
+        ttk.Label(key_frame, text="Key:").grid(row=0, column=0, sticky=tk.W)
+        self.key_var = tk.StringVar()
+        self.key_entry = ttk.Entry(key_frame, textvariable=self.key_var, width=40)
+        self.key_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+
+        # Thêm nút xác nhận
+        self.verify_btn = ttk.Button(key_frame, text="Kiểm tra Key", command=self.verify_key)
+        self.verify_btn.grid(row=0, column=2, padx=5, pady=5)
+
+        # Label trạng thái
+        self.status_label_var = tk.StringVar()
+        self.status_label = ttk.Label(key_frame, textvariable=self.status_label_var)
+        self.status_label.grid(row=1, column=1, sticky=tk.W, pady=(0, 5))
+
+
         # Label và Entry cho tên thuốc
-        ttk.Label(left_frame, text="Tên thuốc:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(left_frame, text="Tên thuốc:").grid(row=1, column=0, sticky=tk.W)
         self.brand_var = tk.StringVar()
         self.brand_entry = ttk.Entry(left_frame, textvariable=self.brand_var, width=40)
-        self.brand_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
-        
+        self.brand_entry.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+
         # Label và Entry cho hoạt chất
-        ttk.Label(left_frame, text="Hoạt chất:").grid(row=1, column=0, sticky=tk.W)
+        ttk.Label(left_frame, text="Hoạt chất:").grid(row=2, column=0, sticky=tk.W)
         self.ingredient_var = tk.StringVar()
         self.ingredient_entry = ttk.Entry(left_frame, textvariable=self.ingredient_var, width=40)
-        self.ingredient_entry.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+        self.ingredient_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+
+
 
         # Dictionary để lưu trữ các biến và entry fields
         self.drug_entries = {}
@@ -361,6 +461,11 @@ class DrugSearchApp:
             self.message.set("Vui lòng nhập tổng tiền hợp lệ")
 
     def search_drugs(self, brand_name: str, ingredient_name: str) -> List[Tuple]:
+            # Kiểm tra key trước khi tìm kiếm
+        if self.status_label_var.get() != "✓ Key hợp lệ":
+            return []
+
+
         """Tìm kiếm thuốc trong database"""
         query = """
         SELECT [soDangKy], [tenThuoc], [hoatChatChinh], [soDangKyCu], [ngayHetHan], [soQuyetDinh]
@@ -388,6 +493,10 @@ class DrugSearchApp:
             self.result_tree.insert("", tk.END, values=result)
 
     def on_search_change(self, *args):
+        """Xử lý sự kiện khi người dùng nhập text"""
+        # Kiểm tra key trước khi tìm kiếm
+        if not self.validate_key():
+            return
         """Xử lý sự kiện khi người dùng nhập text"""
         brand_search = self.brand_var.get().strip()
         ingredient_search = self.ingredient_var.get().strip()
