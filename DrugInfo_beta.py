@@ -94,10 +94,14 @@ class DrugSearchApp:
         """Validate the user-entered key against the encrypted hostname."""
         try:
             # Get the hostname of the machine
-            hostname = socket.gethostname()[7:]
+            full_hostname = socket.gethostname()
+            if full_hostname[:4] == "GTSC":
+                hostname = full_hostname[7:].upper()
+            else:
+                hostname = full_hostname.upper()
             
             # Use a fixed key for encryption (you can change this to a more secure key)
-            encryption_key = "13011991"
+            encryption_key = "130119910109199117122021"
             
             # Encode the hostname using the advanced method
             encoded_hostname = self.encode_string_advanced(hostname, encryption_key)
@@ -118,7 +122,7 @@ class DrugSearchApp:
 
     def __init__(self, root):
         self.root = root
-        self.root.title("Ứng dụng Tra cứu Thuốc - beta 0.3.1")
+        self.root.title("Ứng dụng Tra cứu Thuốc - version Beta 0.4.1")
 
         # Initialize previous search variables
         self.prev_brand_search = ""
@@ -326,7 +330,7 @@ class DrugSearchApp:
         self.result_tree.bind('<Double-1>', self.on_tree_double_click)
 
         # Add copyright label at the bottom of main_frame
-        copyright_label = ttk.Label(main_frame, text="©Copyright by Hau   -   version 0.3.1", font=("Arial", 8), foreground="grey")
+        copyright_label = ttk.Label(main_frame, text="©Copyright by Hau   -   version 0.4.1", font=("Arial", 8), foreground="grey")
         copyright_label.grid(row=100, column=0, columnspan=2, pady=5, sticky=tk.S)
 
         # Make sure the last row (with copyright) expands to fill space
@@ -443,7 +447,7 @@ class DrugSearchApp:
             # Update the info label
             if result > 0:
                 if discount_percent == 20:
-                    self.message.set(f"Trừ {result:,.0f}đ số tiền vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
+                    self.message.set(f"Tổng toa thuốc {total_amount:,.0f}VND / Vitamin {sum_drugs:,.0f}VND -> Trừ {result:,.0f}đ số tiền vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
                 # elif discount_percent == 50:
                 #     self.message.set(f"Trừ {result:,.0f}đ số tiền vượt hạn mức 50% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
                 self.info_label_var.set(self.message.get())
