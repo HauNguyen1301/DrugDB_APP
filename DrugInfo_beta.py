@@ -10,8 +10,7 @@ import pyperclip  # Add this import at the top of your file
 import socket
 import base64
 
-GLOBAL_ENCRYPTION_KEY = "17121991"  # Thay đổi key này khi cần
-
+GLOBAL_ENCRYPTION_KEY = "17121991"
 
 
 class FormattedEntry(ttk.Entry):
@@ -599,17 +598,11 @@ class DrugSearchApp:
         """Đóng kết nối database khi đóng ứng dụng"""
         if hasattr(self, 'conn'):
             self.conn.close()
-
-# Add these imports at the top of your file:
-import pandas as pd
-from tkinter import filedialog
-import os
-
 class EncryptDecryptApp:
     def __init__(self, master):
         self.master = master
         master.title("Encrypt/Decrypt App")
-        master.geometry("400x350")  # Made window slightly taller for new button
+        master.geometry("400x300")
 
         self.key = GLOBAL_ENCRYPTION_KEY
 
@@ -638,10 +631,6 @@ class EncryptDecryptApp:
         self.decrypt_button = ttk.Button(master, text="Decrypt", command=self.decrypt)
         self.decrypt_button.pack(pady=10)
 
-        # Add new button for Excel processing
-        self.excel_button = ttk.Button(master, text="Process Excel File", command=self.process_excel_file)
-        self.excel_button.pack(pady=10)
-
     def encrypt(self):
         input_string = self.input_entry.get()
         if input_string:
@@ -667,52 +656,7 @@ class EncryptDecryptApp:
         else:
             messagebox.showwarning("Warning", "Please enter text to decrypt.")
 
-    def process_excel_file(self):
-        try:
-            # Open file dialog to select Excel file
-            file_path = filedialog.askopenfilename(
-                title="Select Excel File",
-                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")]
-            )
-
-            if not file_path:  # If user cancels selection
-                return
-
-            # Read Excel file
-            df = pd.read_excel(file_path)
-
-            # Check if column A exists
-            if df.empty or len(df.columns) < 1:
-                messagebox.showerror("Error", "Excel file must contain at least one column")
-                return
-
-            # Get values from first column
-            input_strings = df.iloc[:, 0].astype(str)
-
-            # Encrypt each value
-            encrypted_values = [encode_string_advanced(str(val), self.key) for val in input_strings]
-
-            # Create new dataframe with original and encrypted values
-            result_df = pd.DataFrame({
-                'Original': input_strings,
-                'Encrypted': encrypted_values
-            })
-
-            # Create output filename
-            file_dir = os.path.dirname(file_path)
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            output_path = os.path.join(file_dir, f"{file_name}_encrypted.xlsx")
-
-            # Save to new Excel file
-            result_df.to_excel(output_path, index=False)
-
-            messagebox.showinfo("Success", 
-                f"File processed successfully!\nOutput saved to:\n{output_path}")
-
-        except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {str(e)}")
-
-# Helper functions remain the same
+# Add helper functions for encryption/decryption
 def xor_encrypt(input_string, key):
     """Perform XOR encryption on the input string using the given key."""
     encrypted_chars = [chr(ord(char) ^ ord(key[i % len(key)])) for i, char in enumerate(input_string)]
@@ -730,7 +674,6 @@ def decode_string_advanced(encoded_string, key):
     decoded_bytes = base64.b64decode(encoded_string)
     xor_encrypted = decoded_bytes.decode('utf-8')
     return xor_encrypt(xor_encrypted, key)
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = DrugSearchApp(root)
