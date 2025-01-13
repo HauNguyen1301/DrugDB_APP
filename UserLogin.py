@@ -26,14 +26,12 @@ class EncryptDecryptApp:
         master.title("Encrypt/Decrypt App")
         master.geometry("400x300")
 
-        self.key = '130119910109199117122021'
+        self.key = '17122021'
 
         # Get computer name
         full_hostname = socket.gethostname()
-        if full_hostname[:4].upper() == "GTSC":
-            self.hostname = full_hostname[7:]
-        else:
-            self.hostname = full_hostname
+        
+        self.hostname = full_hostname
 
         # Create widgets
         ttk.Label(master, text=f"Computer name: {self.hostname}").pack(pady=10)

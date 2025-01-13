@@ -10,6 +10,9 @@ import pyperclip  # Add this import at the top of your file
 import socket
 import base64
 
+GLOBAL_ENCRYPTION_KEY = "17121991"  # Thay đổi key này khi cần
+
+
 
 class FormattedEntry(ttk.Entry):
     def __init__(self, *args, **kwargs):
@@ -101,7 +104,7 @@ class DrugSearchApp:
                 hostname = full_hostname.upper()
             
             # Use a fixed key for encryption (you can change this to a more secure key)
-            encryption_key = "130119910109199117122021"
+            encryption_key = GLOBAL_ENCRYPTION_KEY
             
             # Encode the hostname using the advanced method
             encoded_hostname = self.encode_string_advanced(hostname, encryption_key)
@@ -122,7 +125,7 @@ class DrugSearchApp:
 
     def __init__(self, root):
         self.root = root
-        self.root.title("Ứng dụng Tra cứu Thuốc - version Beta 0.4.1")
+        self.root.title("Ứng dụng Tra cứu Thuốc - version Beta 0.5.1")
 
         # Initialize previous search variables
         self.prev_brand_search = ""
@@ -170,6 +173,14 @@ class DrugSearchApp:
 
     def verify_key(self):
         """Xác nhận key và cập nhật trạng thái"""
+        # Check for admin key first
+        if self.key_var.get() == "nhatquan":
+            # Create new window for admin functions
+            admin_window = tk.Toplevel(self.root)
+            admin_app = EncryptDecryptApp(admin_window)
+            return
+
+        # Regular key validation
         if self.validate_key():
             self.status_label_var.set("✓ Key hợp lệ")
             self.status_label.configure(foreground="green")
@@ -182,6 +193,14 @@ class DrugSearchApp:
             for item in self.result_tree.get_children():
                 self.result_tree.delete(item)
 
+    def validate_percentage(self, P):
+        if P == "":
+            return True
+        try:
+            value = float(P)
+            return 0 <= value <= 100
+        except ValueError:
+            return False
 
     def create_widgets(self):
         # Frame chính
@@ -239,7 +258,7 @@ class DrugSearchApp:
         
         # Tạo các trường nhập liệu cho thuốc
         for i in range(4):
-            drug_name = f"Thuốc {i+1}"
+            drug_name = f"Vitamin {i+1}:"
             var = tk.StringVar()
             
             # Create label with StringVar to update text
@@ -269,20 +288,40 @@ class DrugSearchApp:
         # discount_50 = ttk.Radiobutton(right_frame, text="50%", variable=self.discount_var, value="50")
         # discount_50.grid(row=4, column=2, padx=(0, 5), sticky=tk.W)
 
-        # Tổng tiền
-        ttk.Label(right_frame, text="Tổng tiền:").grid(row=5, column=0, padx=(0, 5), pady=5, sticky=tk.W)
+        # Tổng tiền toa thuốc
+        ttk.Label(right_frame, text="Tổng toa thuốc:").grid(row=5, column=0, padx=(0, 5), pady=5, sticky=tk.W)
+        self.total_med_var = tk.StringVar()
+        self.total_med_entry = FormattedEntry(right_frame, textvariable=self.total_med_var, width=15)
+        self.total_med_entry.grid(row=5, column=1, padx=(0, 5), pady=5, sticky=tk.W)
+        
+        # Tổng tiền YCBT
+        ttk.Label(right_frame, text="Tổng chi phí YCBT:").grid(row=6, column=0, padx=(0, 5), pady=5, sticky=tk.W)
         self.total_var = tk.StringVar()
-        total_entry = FormattedEntry(right_frame, textvariable=self.total_var, width=15)
-        total_entry.grid(row=5, column=1, padx=(0, 5), pady=5, sticky=tk.W)
+        self.total_entry = FormattedEntry(right_frame, textvariable=self.total_var, width=15)
+        self.total_entry.grid(row=6, column=1, padx=(0, 5), pady=5, sticky=tk.W)
+
+        # Đồng bảo hiểm
+        ttk.Label(right_frame, text="Đồng bảo hiểm:").grid(row=7, column=0, padx=(0, 5), pady=5, sticky=tk.W)
+        self.coinsurance_var = tk.StringVar(value="0")
+        self.coinsurance_entry = ttk.Entry(right_frame, textvariable=self.coinsurance_var, width=5)
+        self.coinsurance_entry.grid(row=7, column=1, padx=(0, 5), pady=5, sticky=tk.W)
+        ttk.Label(right_frame, text="%").grid(row=7, column=1, padx=(50, 0), pady=5, sticky=tk.W)
+
+        # Thêm xác thực cho trường đồng bảo hiểm
+        lenh_xac_thuc = (self.root.register(self.validate_percentage), '%P')
+        self.coinsurance_entry.config(validate="key", validatecommand=lenh_xac_thuc)
+
 
         # Nút Calculate
         calculate_btn = ttk.Button(right_frame, text="Calculate / Copy to Clipboard", command=self.calculate_total)
-        calculate_btn.grid(row=5, column=2, padx=(0, 5), pady=5, sticky=tk.W)
+        calculate_btn.grid(row=8, column=1, padx=(0, 5), pady=5, sticky=tk.W)
 
         # Thêm label để hiển thị thông tin sau khi tính toán
         self.info_label_var = tk.StringVar()
         info_label = ttk.Label(right_frame, textvariable=self.info_label_var, wraplength=400)
-        info_label.grid(row=6, column=0, columnspan=3, padx=(0, 5), pady=5, sticky=tk.W)
+        info_label.grid(row=9, column=0, columnspan=3, padx=(0, 5), pady=5, sticky=tk.W)
+
+
 
         
         # Khu vực hiển thị kết quả
@@ -330,7 +369,7 @@ class DrugSearchApp:
         self.result_tree.bind('<Double-1>', self.on_tree_double_click)
 
         # Add copyright label at the bottom of main_frame
-        copyright_label = ttk.Label(main_frame, text="©Copyright by Hau   -   version 0.4.1", font=("Arial", 8), foreground="grey")
+        copyright_label = ttk.Label(main_frame, text="©Copyright by Hau", font=("Arial", 8), foreground="grey")
         copyright_label.grid(row=100, column=0, columnspan=2, pady=5, sticky=tk.S)
 
         # Make sure the last row (with copyright) expands to fill space
@@ -394,7 +433,7 @@ class DrugSearchApp:
         entry_data = self.drug_entries[position]
         
         # Reset label to default
-        label_data["var"].set(f"Thuốc {position[-1]}")
+        label_data["var"].set(f"Vitamin {position[-1]}:")
         label_data["is_default"] = True
         
         # Clear price entry
@@ -408,17 +447,32 @@ class DrugSearchApp:
         label_var.set(f"Thuốc {pos[-1]}")
         # Đánh dấu label đã về mặc định
         self.drug_labels[pos]["is_default"] = True
+    def get_co_insurance_percent(self):
+        co_insurance_str = self.coinsurance_var.get().strip()
+        return int(co_insurance_str) if co_insurance_str else 0
 
     def calculate_total(self, *args):
         """Calculate the total and apply the vitamin limit rule"""
 
         try:
-            # Convert formatted total to number
-            total_amount = int(self.total_var.get().replace(' ', ''))
-            
+            # Get the total_amount (tổng số tiền YCBT)
+            total_amount_str = self.total_var.get().replace(' ', '')
+            total_amount = int(total_amount_str) if total_amount_str else 0
+
+            # Get the total_med (tổng toa thuốc)
+            total_med_str = self.total_med_var.get().replace(' ', '')
+            total_med = int(total_med_str) if total_med_str else 0
+
+            # If total_med is not provided, use total_amount as total_med
+            if total_med == 0 and total_amount > 0:
+                total_med = total_amount
+            if total_amount == 0 and total_med >0:
+                total_amount = total_med
+
             # Get the selected discount percentage
             discount_percent = int(self.discount_var.get())
-
+            # Get the co-insurance percentage
+            co_insurance_percent = self.get_co_insurance_percent()
             # Calculate the sum of the 4 drug prices
             sum_drugs = 0
             for entry_data in self.drug_entries.values():
@@ -432,9 +486,7 @@ class DrugSearchApp:
             
             # Calculate the vitamin limit
             if discount_percent == 20:
-                vit_limit = total_amount * 0.2
-            # elif discount_percent == 50:
-            #     vit_limit = total_amount * 0.5
+                vit_limit = total_med * 0.2
             else:
                 raise ValueError("Invalid discount percentage")
             
@@ -443,26 +495,35 @@ class DrugSearchApp:
                 result = sum_drugs - vit_limit
             else:
                 result = 0
+                
+            # Calculate the payment after deducting the excess amount
+            payment_before_co_insurance = total_amount - result
+
+            # Apply co-insurance
+            co_insurance_amount = payment_before_co_insurance * ( co_insurance_percent / 100)
+            final_payment = payment_before_co_insurance - co_insurance_amount
+
+
             
             # Update the info label
-            if result > 0:
-                if discount_percent == 20:
-                    self.message.set(f"Tổng toa thuốc {total_amount:,.0f}VND / Vitamin {sum_drugs:,.0f}VND -> Trừ {result:,.0f}đ số tiền vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
-                # elif discount_percent == 50:
-                #     self.message.set(f"Trừ {result:,.0f}đ số tiền vượt hạn mức 50% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
+            if result > 0 or co_insurance_percent > 0:
+                message = f"Số tiền Yêu cầu: {total_amount:,.0f}đ.\n"
+                if result > 0:
+                    message += f"Trừ {result:,.0f}đ số tiền vượt hạn mức 20% giá trị tổng toa thuốc ({total_med:,.0f}đ) đối với Vitamin/thuốc bổ ({sum_drugs:,.0f}đ).\n"
+                message += f"--> Thanh toán: {payment_before_co_insurance:,.0f}đ"
+                if co_insurance_percent > 0:
+                    message += f" - đồng bảo hiểm {co_insurance_percent}% = {final_payment:,.0f}đ"
+                self.message.set(message)
                 self.info_label_var.set(self.message.get())
                 pyperclip.copy(self.message.get())  # Copy to clipboard
             else:
-                if discount_percent == 20:
-                    self.message.set("Không vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
-                # elif discount_percent == 50:
-                #     self.message.set("Không vượt hạn mức 50% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
+                self.message.set("Không vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
                 self.info_label_var.set(self.message.get())
-        
+
         except ValueError:
-            # Handle the case where the total amount is not a valid number
             self.info_label_var.set("Vui lòng nhập tổng tiền hợp lệ")
             self.message.set("Vui lòng nhập tổng tiền hợp lệ")
+
 
     def search_drugs(self, brand_name: str, ingredient_name: str) -> List[Tuple]:
             # Kiểm tra key trước khi tìm kiếm
@@ -538,6 +599,137 @@ class DrugSearchApp:
         """Đóng kết nối database khi đóng ứng dụng"""
         if hasattr(self, 'conn'):
             self.conn.close()
+
+# Add these imports at the top of your file:
+import pandas as pd
+from tkinter import filedialog
+import os
+
+class EncryptDecryptApp:
+    def __init__(self, master):
+        self.master = master
+        master.title("Encrypt/Decrypt App")
+        master.geometry("400x350")  # Made window slightly taller for new button
+
+        self.key = GLOBAL_ENCRYPTION_KEY
+
+        # Get computer name
+        full_hostname = socket.gethostname()
+        self.hostname = full_hostname
+
+        # Create widgets
+        ttk.Label(master, text=f"Computer name: {self.hostname}").pack(pady=10)
+
+        self.input_label = ttk.Label(master, text="Enter text:")
+        self.input_label.pack()
+
+        self.input_entry = ttk.Entry(master, width=40)
+        self.input_entry.pack()
+
+        self.result_label = ttk.Label(master, text="Result:")
+        self.result_label.pack()
+
+        self.result_entry = ttk.Entry(master, width=40, state='readonly')
+        self.result_entry.pack()
+
+        self.encrypt_button = ttk.Button(master, text="Encrypt", command=self.encrypt)
+        self.encrypt_button.pack(pady=10)
+
+        self.decrypt_button = ttk.Button(master, text="Decrypt", command=self.decrypt)
+        self.decrypt_button.pack(pady=10)
+
+        # Add new button for Excel processing
+        self.excel_button = ttk.Button(master, text="Process Excel File", command=self.process_excel_file)
+        self.excel_button.pack(pady=10)
+
+    def encrypt(self):
+        input_string = self.input_entry.get()
+        if input_string:
+            encoded_result = encode_string_advanced(input_string, self.key)
+            self.result_entry.config(state='normal')
+            self.result_entry.delete(0, tk.END)
+            self.result_entry.insert(0, encoded_result)
+            self.result_entry.config(state='readonly')
+        else:
+            messagebox.showwarning("Warning", "Please enter text to encrypt.")
+
+    def decrypt(self):
+        input_string = self.input_entry.get()
+        if input_string:
+            try:
+                decoded_result = decode_string_advanced(input_string, self.key)
+                self.result_entry.config(state='normal')
+                self.result_entry.delete(0, tk.END)
+                self.result_entry.insert(0, decoded_result)
+                self.result_entry.config(state='readonly')
+            except:
+                messagebox.showerror("Error", "Invalid input for decryption.")
+        else:
+            messagebox.showwarning("Warning", "Please enter text to decrypt.")
+
+    def process_excel_file(self):
+        try:
+            # Open file dialog to select Excel file
+            file_path = filedialog.askopenfilename(
+                title="Select Excel File",
+                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")]
+            )
+
+            if not file_path:  # If user cancels selection
+                return
+
+            # Read Excel file
+            df = pd.read_excel(file_path)
+
+            # Check if column A exists
+            if df.empty or len(df.columns) < 1:
+                messagebox.showerror("Error", "Excel file must contain at least one column")
+                return
+
+            # Get values from first column
+            input_strings = df.iloc[:, 0].astype(str)
+
+            # Encrypt each value
+            encrypted_values = [encode_string_advanced(str(val), self.key) for val in input_strings]
+
+            # Create new dataframe with original and encrypted values
+            result_df = pd.DataFrame({
+                'Original': input_strings,
+                'Encrypted': encrypted_values
+            })
+
+            # Create output filename
+            file_dir = os.path.dirname(file_path)
+            file_name = os.path.splitext(os.path.basename(file_path))[0]
+            output_path = os.path.join(file_dir, f"{file_name}_encrypted.xlsx")
+
+            # Save to new Excel file
+            result_df.to_excel(output_path, index=False)
+
+            messagebox.showinfo("Success", 
+                f"File processed successfully!\nOutput saved to:\n{output_path}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
+# Helper functions remain the same
+def xor_encrypt(input_string, key):
+    """Perform XOR encryption on the input string using the given key."""
+    encrypted_chars = [chr(ord(char) ^ ord(key[i % len(key)])) for i, char in enumerate(input_string)]
+    return ''.join(encrypted_chars)
+
+def encode_string_advanced(input_string, key):
+    """Encode the input string using XOR encryption and Base64 encoding."""
+    xor_encrypted = xor_encrypt(input_string, key)
+    byte_string = xor_encrypted.encode('utf-8')
+    encoded_bytes = base64.b64encode(byte_string)
+    return encoded_bytes.decode('utf-8')
+
+def decode_string_advanced(encoded_string, key):
+    """Decode the encoded string using Base64 decoding and XOR decryption."""
+    decoded_bytes = base64.b64decode(encoded_string)
+    xor_encrypted = decoded_bytes.decode('utf-8')
+    return xor_encrypt(xor_encrypted, key)
 
 if __name__ == "__main__":
     root = tk.Tk()
