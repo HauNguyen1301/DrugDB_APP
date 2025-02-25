@@ -6,15 +6,19 @@ from datetime import datetime
 
 # Global encryption key
 KEY_TEMP = "17121991"
-def get_current_year():
-    """Lấy năm hiện tại."""
-    return str(datetime.now().year)  # Chuyển thành chuỗi để nối với key
+
+def get_current_quarter():
+    """Lấy quý hiện tại và trả về '1' cho quý 1-2, '2' cho quý 3-4."""
+    current_month = datetime.now().month
+    quarter = (current_month - 1) // 3 + 1
+    return str('1') if quarter <= 2 else str('2')
 
 def generate_dynamic_key():
     """Tạo key động bằng cách kết hợp GLOBAL_ENCRYPTION_KEY với năm hiện tại."""
-    return KEY_TEMP + get_current_year()
+    return KEY_TEMP + get_current_quarter()
 
 GLOBAL_ENCRYPTION_KEY = generate_dynamic_key()
+
 
 
 def xor_encrypt(input_string, key):

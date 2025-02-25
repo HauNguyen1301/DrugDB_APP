@@ -10,16 +10,20 @@ import pyperclip  # Add this import at the top of your file
 import socket
 import base64
 from datetime import datetime
+import subprocess
+from tkinter import IntVar
 
 
 KEY_TEMP = "17121991"
-def get_current_year():
-    """Lấy năm hiện tại."""
-    return str(datetime.now().year)  # Chuyển thành chuỗi để nối với key
+def get_current_quarter():
+    """Lấy quý hiện tại và trả về '1' cho quý 1-2, '2' cho quý 3-4."""
+    current_month = datetime.now().month
+    quarter = (current_month - 1) // 3 + 1
+    return str('1') if quarter <= 2 else str('2')
 
 def generate_dynamic_key():
     """Tạo key động bằng cách kết hợp GLOBAL_ENCRYPTION_KEY với năm hiện tại."""
-    return KEY_TEMP + get_current_year()
+    return KEY_TEMP + get_current_quarter()
 
 GLOBAL_ENCRYPTION_KEY = generate_dynamic_key()
 print("Key hiện tại:", GLOBAL_ENCRYPTION_KEY)
@@ -189,7 +193,7 @@ class DrugSearchApp:
 
     def __init__(self, root):
         self.root = root
-        self.root.title("Ứng dụng Tra cứu Thuốc - v1.7.0")
+        self.root.title("Ứng dụng Tra cứu Thuốc - v1.7.1.0")
 
         # Initialize previous search variables
         self.prev_brand_search = ""
@@ -297,7 +301,7 @@ class DrugSearchApp:
 
         # Frame trái cho tìm kiếm
         left_frame = ttk.Frame(main_frame)
-        left_frame.grid(row=0, column=0, sticky=(tk.W, tk.N), padx=(0, 20))
+        left_frame.grid(row=0, column=0, sticky=(tk.W, tk.N, tk.S), padx=(0, 20))
 
         # Label và Entry cho key (row 0)
         key_frame = ttk.Frame(left_frame)
@@ -340,7 +344,7 @@ class DrugSearchApp:
         right_frame = ttk.Frame(main_frame)
         right_frame.grid(row=0, column=1, sticky=(tk.W, tk.N), padx=(0, 250))  # Thêm padding bên phải
 
-
+        
         
         # Tạo các trường nhập liệu cho thuốc
         for i in range(4):
@@ -371,26 +375,62 @@ class DrugSearchApp:
         discount_20 = ttk.Radiobutton(right_frame, text="20%", variable=self.discount_var, value="20")
         discount_20.grid(row=4, column=1, padx=(0, 5), sticky=tk.W)
         
+
         # discount_50 = ttk.Radiobutton(right_frame, text="50%", variable=self.discount_var, value="50")
         # discount_50.grid(row=4, column=2, padx=(0, 5), sticky=tk.W)
+        
+        # Tạo một style mới
+        style = ttk.Style()
+        style.configure("ItalicLabel.TLabel", font=("Arial", 10, "italic"))
 
+        # In your __init__ method or wherever you initialize your variables
+        self.ktpvbh_checkboxes = {
+            "Thuốc": IntVar(),
+            "VTYT": IntVar(),
+            "DVKT": IntVar()
+        }
+        #Add some vertical space
+        ttk.Label(left_frame, text="").grid(row=6, column=0, pady=10)
+        ttk.Label(left_frame, text="").grid(row=7, column=0, pady=10)
         # Tổng tiền toa thuốc
-        ttk.Label(right_frame, text="Tổng toa thuốc:").grid(row=5, column=0, padx=(0, 5), pady=5, sticky=tk.W)
+        ttk.Label(left_frame, text="Tổng toa thuốc:").grid(row=8, column=0, padx=(0, 5), pady=5, sticky=tk.W)
         self.total_med_var = tk.StringVar()
-        self.total_med_entry = FormattedEntry(right_frame, textvariable=self.total_med_var, width=15)
-        self.total_med_entry.grid(row=5, column=1, padx=(0, 5), pady=5, sticky=tk.W)
+        self.total_med_entry = FormattedEntry(left_frame, textvariable=self.total_med_var, width=15)
+        self.total_med_entry.grid(row=8, column=1, padx=(0, 5), pady=5, sticky=tk.W)
         
         # Tổng tiền YCBT
-        ttk.Label(right_frame, text="Tổng chi phí YCBT:").grid(row=6, column=0, padx=(0, 5), pady=5, sticky=tk.W)
+        ttk.Label(left_frame, text="Tổng chi phí YCBT:").grid(row=9, column=0, padx=(0, 5), pady=5, sticky=tk.W)
         self.total_var = tk.StringVar()
-        self.total_entry = FormattedEntry(right_frame, textvariable=self.total_var, width=15)
-        self.total_entry.grid(row=6, column=1, padx=(0, 5), pady=5, sticky=tk.W)
+        self.total_entry = FormattedEntry(left_frame, textvariable=self.total_var, width=15)
+        self.total_entry.grid(row=9, column=1, padx=(0, 5), pady=5, sticky=tk.W)
 
-        # KHÔNG THUỘC PVBH
-        ttk.Label(right_frame, text="**Không thuộc PVBH:").grid(row=7, column=0, padx=(0, 5), pady=5, sticky=tk.W)
+
+        ktpvbh_frame = ttk.Frame(left_frame)
+        ktpvbh_frame.grid(row=10, column=0, columnspan=2, sticky=tk.W, pady=5)
+
+        ttk.Label(ktpvbh_frame, text="**Không thuộc PVBH:", style="ItalicLabel.TLabel").grid(row=0, column=0, padx=(0, 5), sticky=tk.W)
         self.ktpvbh_var = tk.StringVar()
-        self.total_entry = FormattedEntry(right_frame, textvariable=self.ktpvbh_var, width=15)
-        self.total_entry.grid(row=7, column=1, padx=(0, 5), pady=5, sticky=tk.W)
+        self.ktpvbh_entry = FormattedEntry(ktpvbh_frame, textvariable=self.ktpvbh_var, width=15)
+        self.ktpvbh_entry.grid(row=0, column=1, padx=(0, 5), sticky=tk.W)
+        # # KHÔNG THUỘC PVBH
+        # ttk.Label(left_frame, text="**Không thuộc PVBH:", style="ItalicLabel.TLabel").grid(row=10, column=0, padx=(0, 5), pady=5, sticky=tk.W)
+        # self.ktpvbh_var = tk.StringVar()
+        # self.total_entry = FormattedEntry(left_frame, textvariable=self.ktpvbh_var, width=15)
+        # self.total_entry.grid(row=10, column=1, padx=(0, 5), pady=5, sticky=tk.W)
+
+        # Add checkboxes
+        checkbox_frame = ttk.Frame(ktpvbh_frame)
+        checkbox_frame.grid(row=0, column=2, padx=(5, 0), sticky=tk.W)
+
+        ttk.Checkbutton(checkbox_frame, text="Thuốc", variable=self.ktpvbh_checkboxes["Thuốc"]).grid(row=0, column=0, padx=(0, 5))
+        ttk.Checkbutton(checkbox_frame, text="VTYT", variable=self.ktpvbh_checkboxes["VTYT"]).grid(row=0, column=1, padx=(0, 5))
+        ttk.Checkbutton(checkbox_frame, text="DVKT", variable=self.ktpvbh_checkboxes["DVKT"]).grid(row=0, column=2, padx=(0, 5))
+
+        # Add a method to get the selected values
+        
+
+
+
 
         # Đồng bảo hiểm
         ttk.Label(right_frame, text="Đồng bảo hiểm:").grid(row=7, column=2, padx=(0, 5), pady=5, sticky=tk.W)
@@ -402,6 +442,13 @@ class DrugSearchApp:
         # Thêm xác thực cho trường đồng bảo hiểm
         lenh_xac_thuc = (self.root.register(self.validate_percentage), '%P')
         self.coinsurance_entry.config(validate="key", validatecommand=lenh_xac_thuc)
+
+        # Thêm nút Calculate ( tạo máy tính )
+        calculator_btn = ttk.Button(right_frame, text="Open Windows Calculator (F1)", command=lambda: subprocess.run(["calc"]))
+        calculator_btn.grid(row=0, column=4, padx=(0, 10), pady=10, sticky=tk.W)
+
+        # Gán phím F1 để mở máy tính Windows
+        root.bind("<F1>", lambda event: subprocess.run(["calc"]))
 
 
         # Nút Calculate
@@ -422,6 +469,8 @@ class DrugSearchApp:
         # Khu vực hiển thị kết quả
         result_frame = ttk.Frame(main_frame)
         result_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+        main_frame.grid_rowconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(0, weight=1)
         
         ttk.Label(result_frame, text="Kết quả tìm kiếm:").grid(row=0, column=0, sticky=tk.W)
         
@@ -430,7 +479,7 @@ class DrugSearchApp:
             result_frame, 
             columns=("reg_no", "drugname", "Phân loại", "ingredient",  "reg_no_old",  "soQuyetDinh"),
             show="headings",
-            height=20
+            height=10
         )
         self.result_tree.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
@@ -443,12 +492,12 @@ class DrugSearchApp:
         self.result_tree.heading("soQuyetDinh", text="Số quyết định")
         
         # Configure column widths
-        self.result_tree.column("reg_no", width=100, minwidth=100)
-        self.result_tree.column("drugname", width=150, minwidth=150)
-        self.result_tree.column("Phân loại", width=120, minwidth=50)
-        self.result_tree.column("ingredient", width=450, minwidth=200)        
-        self.result_tree.column("reg_no_old", width=100, minwidth=100)        
-        self.result_tree.column("soQuyetDinh", width=150, minwidth=100) 
+        self.result_tree.column("reg_no", width=80, minwidth=80)
+        self.result_tree.column("drugname", width=120, minwidth=150)
+        self.result_tree.column("Phân loại", width=70, minwidth=50)
+        self.result_tree.column("ingredient", width=300, minwidth=200)        
+        self.result_tree.column("reg_no_old", width=80, minwidth=80)        
+        self.result_tree.column("soQuyetDinh", width=120, minwidth=100) 
         
         self.tooltip = None
         self.tooltip_label = None
@@ -480,7 +529,13 @@ class DrugSearchApp:
         main_frame.grid_columnconfigure(0, weight=1)
         result_frame.grid_rowconfigure(1, weight=1)
         result_frame.grid_columnconfigure(0, weight=1)
-
+    def get_ktpvbh_values(self):
+        selected = []
+        for key, var in self.ktpvbh_checkboxes.items():
+            if var.get() == 1:
+                selected.append(key)
+        return ', '.join(selected)
+    
     def confirm_clear(self):
         """Show confirmation dialog before clearing fields"""
         confirm = messagebox.askyesno(
@@ -551,18 +606,37 @@ class DrugSearchApp:
             if item:
                 values = self.result_tree.item(item, 'values')
                 if values:
-                    # Assuming 'hoatChatChinh' is the 3rd column (index 2) in values
+                    # Assuming 'hoatChatChinh' is the 4th column (index 3) in values
                     hoat_chat_chinh = values[3]
                     
                     tooltip_text = f"Hoạt chất chính: {hoat_chat_chinh}"
                     
+                    if self.tooltip is None:
+                        self.tooltip = tk.Toplevel(self.root)
+                        self.tooltip.wm_overrideredirect(True)
+                        self.tooltip.wm_geometry("+0+0")
+                        self.tooltip.lift()  # Ensure the tooltip is on top
+                        self.tooltip_label = tk.Label(self.tooltip, justify=tk.LEFT, background="#ffffe0", relief=tk.SOLID, borderwidth=1, wraplength=350)
+                        self.tooltip_label.pack(ipadx=1)
+                    
                     self.tooltip_label.config(text=tooltip_text)
                     self.tooltip.geometry(f"+{event.x_root}+{event.y_root + 20}")
                     self.tooltip.deiconify()
+                else:
+                    self.hide_tooltip()
             else:
-                self.tooltip.withdraw()
+                self.hide_tooltip()
         except tk.TclError:
-            pass
+            # Handle any Tkinter errors
+            self.hide_tooltip()
+        except Exception as e:
+            # Log any other unexpected errors
+            print(f"Unexpected error in on_tree_motion: {e}")
+            self.hide_tooltip()
+
+    def hide_tooltip(self):
+        if self.tooltip:
+            self.tooltip.withdraw()
 
     def clear_drug(self, position):
         """Clear the drug label and reset it to the initial state"""
@@ -596,6 +670,7 @@ class DrugSearchApp:
             key = f"drug{i+1}"
             drug_name = self.drug_labels[key]["var"].get()  # Lấy tên thuốc từ label
             drug_value = self.drug_entries[key]["var"].get().replace(" ", "")  # Lấy giá trị nhập vào
+            ktpvbh_selected = self.get_ktpvbh_values() #Lấy giá trị checkbox
 
             # Nếu thuốc có số tiền > 0 và không còn là mặc định, thêm vào danh sách
             if drug_value.isdigit() and int(drug_value) > 0 and not self.drug_labels[key]["is_default"]:
@@ -648,6 +723,7 @@ class DrugSearchApp:
             else:
                 raise ValueError("Invalid discount percentage")
             
+            #result là chi phí vitamin vượt hạn mức
             # Calculate the result (amount exceeding the limit)
             if sum_drugs > vit_limit:
                 result = sum_drugs - vit_limit
@@ -655,17 +731,7 @@ class DrugSearchApp:
                 result = 0
                 
 
-              
-            # Calculate the payment after deducting the excess amount
-            payment_before_co_insurance = total_amount - result
-            payment_after_ngoai_pvbh = payment_before_co_insurance - ngoai_pvbh  
-            # Apply co-insurance
-            co_insurance_amount = payment_before_co_insurance * ( co_insurance_percent / 100)
-            final_payment = payment_before_co_insurance - co_insurance_amount
-
-
-            
-            # Update the info label
+             # Update the info label
             # if result > 0 or co_insurance_percent > 0:
             #     message = f"Số tiền Yêu cầu: {total_amount:,.0f}đ.\n"
             #     if result > 0:
@@ -678,7 +744,18 @@ class DrugSearchApp:
             #     pyperclip.copy(self.message.get())  # Copy to clipboard
             # else:
             #     self.message.set("Không vượt hạn mức 20% giá trị tổng toa thuốc đối với Vitamin/thuốc bổ.")
-            #     self.info_label_var.set(self.message.get())
+            #     self.info_label_var.set(self.message.get())  
+            # Calculate the payment after deducting the excess amount
+            payment_before_co_insurance = total_amount - result
+            #1450.000 = 1450.000 - 0
+            payment_after_ngoai_pvbh = payment_before_co_insurance - ngoai_pvbh  
+            #700.000 = 1450.000 - 750.000
+            # Apply co-insurance
+            co_insurance_amount = payment_after_ngoai_pvbh * ( co_insurance_percent / 100)
+            #      140k           = 700k * (20/100)
+            final_payment = payment_before_co_insurance - co_insurance_amount
+            #      560k           = 700k - 140k
+           
             if ngoai_pvbh <= 0:
                 if result > 0 or co_insurance_percent > 0:
                     message = f"Số tiền yêu cầu: {total_amount:,.0f}đ.\n"
@@ -704,7 +781,7 @@ class DrugSearchApp:
                         # Cập nhật thông báo
                         message += f"Trừ {result:,.0f}đ số tiền vượt hạn mức 20% giá trị tổng toa thuốc ({total_med:,.0f}đ) đối với {selected_vitamins_str} ({sum_drugs:,.0f}đ).\n"
 
-                    message += f"Trừ {ngoai_pvbh:,.0f}đ chi phí .... không thuộc phạm vi bảo hiểm.\n"
+                    message += f"Trừ {ngoai_pvbh:,.0f}đ chi phí {ktpvbh_selected} không thuộc phạm vi bảo hiểm.\n"
                     message += f"--> Thanh toán: {payment_after_ngoai_pvbh:,.0f}đ"
                     if co_insurance_percent > 0:
                         message += f" - đồng bảo hiểm {co_insurance_percent}% = {payment_after_co_insurance_and_ngoai_pvbh:,.0f}đ"
@@ -712,7 +789,7 @@ class DrugSearchApp:
                     self.info_label_var.set(self.message.get())
                     pyperclip.copy(self.message.get())  # Copy to clipboard
                 else:
-                    message = f"Trừ {ngoai_pvbh:,.0f}đ chi phí .... không thuộc phạm vi bảo hiểm.\n--> Thanh toán {payment_after_ngoai_pvbh:,.0f}đ"
+                    message = f"Trừ {ngoai_pvbh:,.0f}đ chi phí {ktpvbh_selected} không thuộc phạm vi bảo hiểm.\n--> Thanh toán {payment_after_ngoai_pvbh:,.0f}đ"
                     self.message.set(message)
                     self.info_label_var.set(self.message.get())
                     pyperclip.copy(self.message.get())  # Copy to clipboard
@@ -734,7 +811,7 @@ class DrugSearchApp:
         SELECT [soDangKy], [tenThuoc], [Phân Loại], [hoatChatChinh], [soDangKyCu],  [soQuyetDinh]
         FROM druginformation
         WHERE [tenThuoc] LIKE ? AND [hoatChatChinh] LIKE ?
-        LIMIT 20
+        LIMIT 10
         """
         def normalize_search_string(search_string):
             return f"%{'%'.join(search_string.split())}%" if search_string else "%"
@@ -882,37 +959,44 @@ if __name__ == "__main__":
     root.mainloop()
 
 
-## Update 1.5.1
-# - Release alpha version
-# - Lưu trữ key trong file
-# - Tìm kiếm thuốc theo tên thuốc và tên thành phần
-# - Lưu trữ kết quả tìm kiếm trong Treeview
-# - Thêm chức năng double click vào item trong Treeview để nhập tên thuốc
-
-## Update 1.5.2
-# - Add chi phí không thuộc phạm vi bảo hiểm
-
-## Update 1.5.3
-# - Cho phép copy paste các ô số tiền
-# - Fix lỗi copy to clipboard vài case chưa có.
-# - sửa hiển thị chính tả.
-# - ADD clear all button
-
-## Update 1.6.1
-# - Add new category for drug ( Vitamin, khoáng chất)
-# - Điều chỉnh hiển thị thông tin sau khi tính toán
-
-## Update 1.6.2
-# - Fix lỗi file type của database, không cần bật extension file name
-
-## Update 1.6.3
-# - downgrade to python 3.8.0
-
-##Update 1.6.4 
-# Change view table 
-# IMporve search
-# fix lỗi database không tự xóa sau khi giải nén
-
-#Update 1.7.0
-# Change Global Key function.
-# update add vitamin_name to output string
+# Update 0.3.1
+# •	Remove 50%
+# •	Fix money input error
+# •	Adjust display information (max 20 lines, replace old registration number, expiration date)
+# Update 0.5.1
+# •	Update new admin function
+# •	Change UI/UX
+# •	Add copay
+# Update 1.5.1
+# •	Release alpha version
+# •	Store key in a file
+# •	Search for drugs by drug name and ingredient name
+# •	Store search results in Treeview
+# •	Add double-click function on items in Treeview to input drug name
+# Update 1.5.2
+# •	Add non-insurance-covered costs
+# Update 1.5.3
+# •	Allow copy-pasting in money fields
+# •	Fix copy-to-clipboard issue in some cases
+# •	Correct spelling display
+# •	Add "Clear All" button
+# Update 1.6.1
+# •	Add a new category for drugs (Vitamins, Minerals)
+# •	Adjust display information after calculation
+# Update 1.6.2
+# •	Fix database file type issue, no need to enable file name extension
+# Update 1.6.3
+# •	Downgrade to Python 3.8.0
+# Update 1.6.4
+# •	Change table view
+# •	Improve search
+# •	Fix database not automatically deleting after extraction
+# Update 1.7.0
+# •	Change Global Key function
+# •	Update to add vitamin_name to output string
+# •	Add calculator 
+# Update 1.7.0.1
+# •	Fix Copay tính sai
+# Update 1.7.1.0
+# •	Change key encryption function (change per 2 quarters)
+# •	Add check box for non-insurance-covered costs
