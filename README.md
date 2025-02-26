@@ -33,3 +33,9 @@
 # Update 1.7.0
 # •	Change Global Key function
 # •	Update to add vitamin_name to output string
+# •	Add calculator 
+# Update 1.7.0.1
+# •	Fix Copay tính sai
+# Update 1.7.1.0
+# •	Change key encryption function (change per 2 quarters)
+# •	Add check box for non-insurance-covered costs
