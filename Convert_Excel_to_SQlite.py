@@ -5,6 +5,7 @@ import gzip
 
 # Đọc dữ liệu từ file CSV chính
 df = pd.read_csv('druginformation.csv')
+print(df.head())
 
 df['soQuyetDinh'] = df['thongTinDangKyThuoc'].str.extract(r"soQuyetDinh': '([^']+)")
 df['hoatChatChinh'] = df['thongTinThuocCoBan'].str.extract(r"hoatChatChinh': '([^']+)")
@@ -12,7 +13,7 @@ df['ngayHetHan'] = df['thongTinDangKyThuoc'].str.extract(r"ngayHetHanSoDangKy': 
 
 # Đọc dữ liệu từ file Excel vitamin
 vitamin_data = pd.read_excel('Vitamin_thuoc_bo.xlsx')
-
+print(vitamin_data.head())
 # Tra cứu và thêm cột "Phân loại" dựa trên hoatChatChinh
 def map_category(row):
     hoat_chat_chinh = str(row['hoatChatChinh']) if not pd.isna(row['hoatChatChinh']) else ""
@@ -21,15 +22,14 @@ def map_category(row):
         dang_su_dung = str(vitamin_row['Dang su dung']) if not pd.isna(vitamin_row['Dang su dung']) else ""
         if ten_vitamin in hoat_chat_chinh or dang_su_dung in hoat_chat_chinh:
             return vitamin_row['Phan loai']
-    return "Nhóm thuốc điều trị"
+    return "Thuốc điều trị"
 
 df['Phân loại'] = df.apply(map_category, axis=1)
-
+print("Phân loại thành công")
 # Kết nối SQLite
 conn = sqlite3.connect('DrugDB.db')
 df.to_sql('drugInformation', conn, if_exists='replace', index=False)
 conn.close()
-
 # Nén file SQLite
 with open('DrugDB.db', 'rb') as f_in, gzip.open('DrugDB.db.gz', 'wb') as f_out:
     f_out.writelines(f_in)

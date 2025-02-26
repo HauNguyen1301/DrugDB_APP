@@ -121,6 +121,7 @@ def scrape_services_api(limit=None):
 if __name__ == "__main__":
     print("Bắt đầu crawl dữ liệu...")
     result = scrape_services_api()  # Crawl toàn bộ dữ liệu
+    timestamp = datetime.now().strftime("%d/%m/%Y_%H:%M:%S")
     if result is not None:
         print("\nMẫu dữ liệu đã crawl:")
         print(result.head())
