@@ -1,4 +1,3 @@
-import base64
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -8,10 +7,11 @@ from datetime import datetime
 KEY_TEMP = "17121991"
 
 def get_current_quarter():
-    """Lấy quý hiện tại và trả về '1' cho quý 1-2, '2' cho quý 3-4."""
+    """Lấy quý hiện tại và trả về năm + '1' cho quý 1-2, năm + '2' cho quý 3-4."""
     current_month = datetime.now().month
+    current_year = datetime.now().year
     quarter = (current_month - 1) // 3 + 1
-    return str('1') if quarter <= 2 else str('2')
+    return f"{current_year}{'1' if quarter <= 2 else '2'}"
 
 def generate_dynamic_key():
     """Tạo key động bằng cách kết hợp GLOBAL_ENCRYPTION_KEY với năm hiện tại."""

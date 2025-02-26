@@ -1197,7 +1197,7 @@ def decode_string_advanced(encoded_string, key):
 def main():
     import tkinter as tk  
     root = tk.Tk()
-    root.geometry("920x760")
+    root.geometry("920x827")
     root.title("Drug Search App")
     app = DrugSearchApp(root)
     root.mainloop()
