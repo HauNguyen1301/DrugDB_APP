@@ -14,6 +14,9 @@ import subprocess
 from tkinter import IntVar
 import pyAesCrypt
 import win32com.client
-import DrugInfo
+import ntplib
+from time import ctime
+import DrugInfo_Dev
 
-DrugInfo.main()
+
+DrugInfo_Dev.main()
